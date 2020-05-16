@@ -3,47 +3,46 @@
 module Main where
 
 import Text.Read (readMaybe)
+import System.IO
+import Control.Monad (forM_)
+
 import Out
 
 deriving instance (Show Q)
 deriving instance (Read Q)
 
-q_to_float :: Q -> Double
-q_to_float (Qmake x y) = (fromInteger $ toInteger x)/(fromInteger $ toInteger y)
+q_to_double :: Q -> Double
+q_to_double (Qmake x y) = (fromInteger $ toInteger x)/(fromInteger $ toInteger y)
 
-{-
-bound :: Int
-bound = 2
+max_rat :: Integer
+max_rat = 3000
 
-div_mesh :: Int -> [(Float,Float)]
-div_mesh n = do
-    den <- [1..n]
-    num <- [(-(bound*den))..(bound*den)]
-    if num == 0 then [] else return (q_to_float $ Qmake num den , q_to_float $ qnz_to_Q $ Qmake num den)
-
-mesh :: Int
-mesh = 7
--}
-
-max_rat :: Int
-max_rat = 300
+-- Q - {0}
 
 get_pairs :: [(Double,Double)]
 get_pairs = do
-    i <- [1..max_rat]
-    let q_in = nat_to_Q i
-    let f_in = q_to_float q_in
-    if f_in > 1.0 || f_in < -1.0 then [] else do
-        let q_out = qnz_to_Q q_in
-        let f_out = q_to_float q_out
-        return (f_in, f_out)
+  i <- [0..(max_rat-1)]
+  let (q_in,_) = nth_Qnz i
+  let d_in = q_to_double q_in
+  let q_out = qnz_to_Q (q_in,())
+  let d_out = q_to_double q_out
+  return (q_to_double q_in, q_to_double q_out)
 
 print_pair :: (Double,Double) -> String
-print_pair (f1,f2) = "" ++ show f1 ++ " , " ++ show f2 ++ ""
+print_pair (f1,f2) = show f1 ++ ", " ++ show f2
 
-print_pairs :: [(Double,Double)] -> String
-print_pairs [] = ""
-print_pairs (p:ps) = print_pair p ++ "\n" ++ print_pairs ps
+-- print_pairs :: [(Double,Double)] -> String
+-- print_pairs [] = ""
+-- print_pairs (p:ps) = print_pair p ++ "\n" ++ print_pairs ps
 
-main :: IO()
-main = writeFile "data.out" $ print_pairs get_pairs
+--main :: IO()
+--main = writeFile "data.out" $ print_pairs get_pairs
+
+main :: IO ()
+main = withFile "data.out" WriteMode $ \h ->
+  forM_ get_pairs $ \t -> hPutStrLn h $ print_pair t
+
+--  forM_ get_triples (print_tuple "data.out")
+
+
+

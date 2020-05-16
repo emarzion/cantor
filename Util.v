@@ -3,28 +3,6 @@ Import ListNotations.
 
 Require Import Class.
 
-Definition setoid_inj{X Y}`{Setoid Y}(f : X -> Y) := forall x x', f x == f x' -> x = x'.
-
-Definition setoid_inj2{X Y}`{Setoid X}(f : X -> Y) := forall x x', f x = f x' -> x == x'.
-
-Fixpoint searchBy{X P}(Pd : forall x : X, {P x} + {~ P x})(xs : list X) : option X :=
-  match xs with
-  | [] => None
-  | x::ys => if Pd x then Some x else searchBy Pd ys
-  end.
-
-Lemma searchBy_in{X P}`{Eq X} : forall (Pd : forall x:X, {P x} + {~ P x}) x xs,
-  searchBy Pd xs = Some x -> setoidIn x xs.
-Proof.
-  induction xs; intros.
-  discriminate.
-  simpl in H1.
-  destruct (Pd a).
-  left.
-  inversion H1; reflexivity.
-  right; auto.
-Qed.
-
 Fixpoint even n :=
   match n with
   | 0 => true
@@ -35,19 +13,19 @@ Lemma even_odd_half : forall n, (even n = true -> exists k, 2 * k = n) /\
   (even n = false -> exists k, S (2 * k) = n).
 Proof.
   induction n; split; intros.
-  exists 0; auto.
-  discriminate.
-  simpl in H.
-  destruct IHn.
-  destruct H1 as [k Hk].
-  destruct (even n); [discriminate | auto].
-  exists (S k).
-  omega.
-  destruct IHn.
-  destruct H0 as [k Hk].
-  simpl in H.
-  destruct (even n); [auto | discriminate].
-  exists k; omega.
+  - exists 0; auto.
+  - discriminate.
+  - simpl in H.
+    destruct IHn.
+    destruct H1 as [k Hk].
+    + destruct (even n); [discriminate | auto].
+    + exists (S k).
+      omega.
+  - destruct IHn.
+    destruct H0 as [k Hk].
+    + simpl in H.
+      destruct (even n); [auto | discriminate].
+    + exists k; omega.
 Qed.
 
 Lemma even_half : forall n, even n = true -> exists k, 2 * k = n.
@@ -63,18 +41,18 @@ Qed.
 Lemma even_2k : forall k, even (2 * k) = true.
 Proof.
   induction k.
-  auto.
-  simpl; rewrite <- plus_n_Sm; simpl.
-  simpl in IHk; rewrite IHk. auto.
+  - auto.
+  - simpl; rewrite <- plus_n_Sm; simpl.
+    simpl in IHk; rewrite IHk; auto.
 Qed.
 
 Lemma odd_2k1 : forall k, even (S (2 * k)) = false.
 Proof.
   induction k.
-  auto.
-  simpl; rewrite <- plus_n_Sm.
-  simpl; simpl in IHk.
-  rewrite IHk; auto.
+  - auto.
+  - simpl; rewrite <- plus_n_Sm.
+    simpl; simpl in IHk.
+    rewrite IHk; auto.
 Qed.
 
 Lemma half_2k : forall k, (2*k)/2 = k.
@@ -92,187 +70,79 @@ Proof.
   apply e.
 Qed.
 
-Fixpoint partby{X Y}`{Ord Y}(f : X -> Y)(xs : list X) y : (list X * list X) :=
-  match xs with
-  | [] => ([],[])
-  | x::xs' => let (below,above) := partby f xs' y in
-    match lt_trich (f x) y with
-    | inleft _ => (x::below,above)
-    | inright _ => (below,x::above)
-    end
+Section Fin.
+
+Fixpoint Fin(n : nat) : Type :=
+  match n with
+  | 0 => Empty_set
+  | S m => unit + Fin m
   end.
 
-Lemma partby_ne{X Y }`{Ord Y} : forall (f : X -> Y)(xs : list X) y,
-  xs <> [] -> partby f xs y <> ([],[]).
-Proof.
-  intros.
-  destruct xs.
-  elim H1; reflexivity.
-  simpl.
-  destruct partby.
-  destruct lt_trich; discriminate.
-Qed.
-
-Fixpoint maxby{X Y}`{Ord Y}(f : X -> Y)(xs : list X) : option X :=
-  match xs with
-  | [] => None
-  | x::xs' => match maxby f xs' with
-              | None => Some x
-              | Some x' => match lt_trich (f x) (f x') with
-                           | inleft _ => Some x'
-                           | _ => Some x
-                           end
-              end
+Fixpoint Fin_le{n} : Fin n -> Fin n -> Prop :=
+  match n with
+  | 0 => fun i _ => match i with end
+  | S m => fun i j => match i,j with
+                      | inl _, inl _ => False
+                      | inl _, inr _ => True
+                      | inr _, inl _ => False
+                      | inr i', inr j' => Fin_le i' j'
+                      end
   end.
 
-Fixpoint minby{X Y}`{Ord Y}(f : X -> Y)(xs : list X) : option X :=
-  match xs with
-  | [] => None
-  | x::xs' => match minby f xs' with
-              | None => Some x
-              | Some x' => match lt_trich (f x) (f x') with
-                           | inleft _ => Some x
-                           | _ => Some x'
-                           end
-              end
+Lemma Fin_le_irref : forall (n : nat)(i : Fin n), ~ Fin_le i i.
+Proof.
+  induction n.
+  - intros [].
+  - destruct i as [[]|j].
+    + tauto.
+    + apply IHn.
+Qed.
+
+Lemma Fin_le_trans : forall (n : nat)(i j k : Fin n), Fin_le i j -> Fin_le j k -> Fin_le i k.
+Proof.
+  induction n; intros.
+  - destruct i.
+  - destruct i as [|i']; destruct k as [|k'].
+    + destruct j; auto.
+    + exact I.
+    + destruct j; auto.
+    + destruct j as [|j'].
+      * destruct H.
+      * apply (IHn _ j' _); auto.
+Qed.
+
+Lemma Fin_trich : forall (n : nat)(i j : Fin n), {i = j} + {Fin_le i j} + {Fin_le j i}.
+Proof.
+  induction n.
+  - intros [].
+  - intros [[]|i'] [[]|j'].
+    + left; left; auto.
+    + left; right; exact I.
+    + right; exact I.
+    + destruct (IHn i' j') as [[Heq|Hle]|Hge].
+      * left; left; congruence.
+      * left; right; exact Hle.
+      * right; exact Hge.
+Qed.
+
+Fixpoint list_index{X}(xs : list X){struct xs} : Fin (length xs) -> X :=
+  match xs return Fin (length xs) -> X with
+  | [] => fun i => match i with end
+  | y::ys => fun i => match i with
+                      | inl _ => y
+                      | inr j => list_index ys j
+                      end
   end.
 
-Lemma maxby_none{X Y}`{Ord Y} : forall (f : X -> Y) xs,
-  maxby f xs = None -> xs = [].
+Lemma in_index : forall {X}`{Eq X}(xs : list X)(x : X), setoidIn x xs -> exists (i : Fin (length xs)),
+  list_index xs i == x.
 Proof.
   induction xs; intros.
-  reflexivity.
-  simpl in H1.
-  destruct maxby in H1.
-  destruct lt_trich; discriminate.
-  discriminate.
+  - destruct H1.
+  - destruct H1.
+    + exists (inl tt); simpl; symmetry; auto.
+    + destruct (IHxs x H1) as [i Hi].
+      exists (inr i); auto.
 Qed.
 
-Lemma minby_none{X Y}`{Ord Y} : forall (f : X -> Y) xs,
-  minby f xs = None -> xs = [].
-Proof.
-  induction xs; intros.
-  reflexivity.
-  simpl in H1.
-  destruct minby in H1.
-  destruct lt_trich; discriminate.
-  discriminate.
-Qed.
-
-Lemma maxby_Some_in{X Y}`{Ord Y} : forall (f : X -> Y) xs x,
-  maxby f xs = Some x -> In x xs.
-Proof.
-  induction xs; intros.
-  simpl in H1; discriminate.
-  simpl in H1.
-  destruct (maxby f xs) eqn:G.
-  destruct lt_trich in H1.
-  right; exact (IHxs _ H1).
-  left; inversion H1; auto.
-  left; inversion H1; congruence.
-Qed.
-
-Lemma maxby_max{X Y}`{Ord Y} : forall (f : X -> Y) xs x,
-  maxby f xs = Some x -> forall x', In x' xs -> f x' << f x \/ f x' == f x.
-Proof.
-  induction xs; intros.
-  discriminate.
-  simpl in H1.
-  destruct (maxby f xs) eqn:G.
-  destruct (lt_trich (f a) (f x0)).
-  destruct s.
-  destruct H2.
-  left.
-  inversion H1; congruence.
-  auto.
-  destruct H2.
-  right.
-  inversion H1; congruence.
-  auto.
-  destruct H2.
-  right.
-  inversion H1.
-  rewrite <- H2, <- H4; reflexivity.
-  inversion H1.
-  left.
-  rewrite H4 in H1.
-  destruct (IHxs x0 eq_refl x').
-  auto.
-  apply (@lt_trans Y H H0 _ (f x0)).
-  exact H3.
-  rewrite <- H4; exact l.
-  rewrite <- H4.
-  apply (@lt_morph Y H H0 (f x0) (f x') (f a) (f a)).
-  symmetry; exact H3.
-  reflexivity.
-  exact l.
-  destruct H2.
-  right.
-  rewrite <- H2.
-  inversion H1.
-  reflexivity.
-  destruct xs.
-  destruct H2.
-  simpl in G.
-  destruct (maxby f xs).
-  destruct lt_trich in G; discriminate.
-  discriminate G.
-Qed.
-
-Lemma minby_min{X Y}`{Ord Y} : forall (f : X -> Y) xs x,
-  minby f xs = Some x -> forall x', In x' xs -> f x << f x' \/ f x' == f x.
-Proof.
-  induction xs; intros.
-  discriminate.
-  simpl in H1.
-  destruct (minby f xs) eqn:G.
-  destruct (lt_trich (f a) (f x0)).
-  destruct s.
-  destruct H2.
-  right.
-  inversion H1.
-  rewrite <- H2, <- H4; reflexivity.
-  destruct (IHxs x0 eq_refl x' H2).
-  left.
-  inversion H1.
-  rewrite H5 in l.
-  apply (@lt_trans Y H H0 (f x) (f x0)); auto.
-  left.
-  inversion H1.
-  rewrite <- H5.
-  apply (@lt_morph Y H H0 (f a) (f a) (f x0) (f x')).
-  reflexivity.
-  symmetry; auto.
-  exact l.
-  destruct H2.
-  right.
-  rewrite <- H2.
-  inversion H1.
-  reflexivity.
-  destruct (IHxs x0 eq_refl x' H2).
-  left.
-  inversion H1.
-  rewrite <- H5.
-  apply (@lt_morph Y H H0 (f x0) (f a) (f x') (f x')).
-  symmetry; auto.
-  reflexivity.
-  exact H3.
-  right.
-  inversion H1.
-  rewrite H5 in e.
-  rewrite e; auto.
-  destruct H2.
-  left.
-  inversion H1; congruence.
-  apply IHxs; auto.
-  destruct xs.
-  destruct H2.
-  right.
-  inversion H1.
-  rewrite <- H2, <- H4; reflexivity.
-  destruct H2.
-  simpl in G.
-  destruct minby in G.
-  destruct lt_trich in G; discriminate.
-  discriminate.
-Qed.
+End Fin.

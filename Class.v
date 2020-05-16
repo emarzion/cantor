@@ -74,6 +74,13 @@ Class Ord X `{Setoid X} := {
 Arguments lt {_} {_} {_} _ _.
 Infix "<<" := lt (at level 20).
 
+Lemma lt_asymm {X}`{Ord X} : forall x y, x << y -> ~ y << x.
+Proof.
+  intros x y Hxy Hyx.
+  elim (lt_irref x).
+  apply (lt_trans _ y _); auto.
+Qed.
+
 Class Iso {X} {Y} `{Setoid X,Setoid Y} (oX : Ord X)(oY : Ord Y) := {
   forward : X -> Y;
   forward_morph : forall x x', x == x' -> forward x == forward x';
@@ -97,8 +104,10 @@ Class CDLOWOEP {X} `{Setoid X} (O:Ord X) := {
   (*dense*)
   mid : X -> X -> X;
   mid_morph : forall x x' y y', x == x' -> y == y' -> mid x y == mid x' y';
+  mid_comm  : forall x x', mid x x' == mid x' x;
   mid_lt_left : forall x x', x << x' -> x << mid x x';
   mid_lt_right : forall x x', x << x' -> mid x x' << x';
+  mid_idem : forall x, mid x x == x;
 
   (*without endpoints*)
   left : X -> X;
@@ -110,13 +119,40 @@ Class CDLOWOEP {X} `{Setoid X} (O:Ord X) := {
 
   }.
 
-(* don't use this, use Ord instead *)
+Lemma mid_lt_left2{X}`{CDLOWOEP X} : forall x x', x << x' -> x << mid x' x.
+Proof.
+  intros.
+  apply (lt_morph x x (mid x x') (mid x' x)).
+  - reflexivity.
+  - apply mid_comm.
+  - apply mid_lt_left; auto.
+Qed.
+
+Lemma mid_lt_right2{X}`{CDLOWOEP X} : forall x x', x << x' -> mid x' x << x'.
+Proof.
+  intros.
+  apply (lt_morph (mid x x') (mid x' x) x' x').
+  - apply mid_comm.
+  - reflexivity.
+  - apply mid_lt_right; auto.
+Qed.
+
 Instance CDLOWOEP_Eq{X}`{sX : Setoid X}(oX : Ord X)`{@CDLOWOEP X sX oX} : Eq X.
 Proof.
   constructor; intros.
-  destruct (nat_dec_eq (to_nat x) (to_nat x')).
-  left.
-  rewrite <- (from_to x), <- (from_to x'), e; reflexivity.
-  right; intro; apply n.
-  apply to_nat_morph; auto.
+  destruct (lt_trich x x') as [[Hlt|Heq]|Hgt].
+  - right; intro.
+    elim (lt_irref x).
+    eapply lt_morph.
+    + reflexivity.
+    + symmetry; exact H0.
+    + exact Hlt.
+  - left; exact Heq.
+  - right; intro.
+    elim (lt_irref x).
+    eapply lt_morph.
+    + symmetry; exact H0.
+    + reflexivity.
+    + exact Hgt.
 Defined.
+
