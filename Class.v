@@ -1,3 +1,5 @@
+(* Class Hierarchy, including definition of Countable Dense Linear Order Without Endpoints *)
+
 Require Import SetoidClass List Omega.
 Import ListNotations.
 

@@ -1,3 +1,5 @@
+(* Various instance of CDLOWOEP *)
+
 Require Import Cantor Class Util SetoidClass Omega.
 
 Instance SetoidSum{X Y}`{Setoid X, Setoid Y} : Setoid (X + Y) :=

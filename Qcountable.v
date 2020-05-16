@@ -1,3 +1,5 @@
+(* Proof that Q is a countable setoid *)
+
 Require Import Lia SetoidClass BinPos Recdef Util Arith.
 
 Record Qpos := mkQp { Qnump : positive; Qdenp : positive }.

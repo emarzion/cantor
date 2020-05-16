@@ -1,3 +1,5 @@
+(* Proof of Cantor's Theorem *)
+
 Require Import SetoidClass List PeanoNat Omega.
 Import ListNotations.
 
