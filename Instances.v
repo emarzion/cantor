@@ -1,4 +1,4 @@
-(* Various instance of CDLOWOEP *)
+(* Various instances of CDLOWOEP *)
 
 Require Import Cantor Class Util SetoidClass Omega.
 
